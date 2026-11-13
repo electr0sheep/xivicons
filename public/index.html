@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>micons — FFXIV macro icon search</title>
+<script>
+(() => {
+  const root = document.documentElement;
+  const systemDark = matchMedia("(prefers-color-scheme: dark)");
+  const systemTheme = () => (systemDark.matches ? "dark" : "light");
+  let saved = null;
+  try { saved = localStorage.getItem("theme"); } catch {}
+  if (saved !== "light" && saved !== "dark") saved = null;
+
+  function apply() {
+    root.dataset.theme = saved || systemTheme();
+    document.getElementById("theme")?.setAttribute("aria-pressed", String(root.dataset.theme === "dark"));
+  }
+
+  function toggle() {
+    const next = root.dataset.theme === "dark" ? "light" : "dark";
+    saved = next === systemTheme() ? null : next; // picking the system's theme goes back to following it
+    try {
+      if (saved) localStorage.setItem("theme", saved);
+      else localStorage.removeItem("theme");
+    } catch {}
+    apply();
+  }
+
+  apply();
+  systemDark.addEventListener("change", apply);
+  document.addEventListener("DOMContentLoaded", apply);
+  document.addEventListener("click", (ev) => { if (ev.target.closest("#theme")) toggle(); });
+})();
+</script>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1c1a; --muted: #6f6b64;
+    --line: #e4e1da; --accent: #b3541e; --accent-ink: #ffffff; --tile-hover: #f1ede4;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #17161a; --panel: #201f24; --ink: #ecebe7; --muted: #9a968d;
+    --line: #313038; --accent: #e0a458; --accent-ink: #1b1710; --tile-hover: #2a2930;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header {
+    position: sticky; top: 0; z-index: 5; background: var(--panel);
+    border-bottom: 1px solid var(--line); padding: 14px 20px;
+    display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+  }
+  h1 { margin: 0; font-size: 20px; letter-spacing: -0.02em; white-space: nowrap; }
+  h1 span { color: var(--accent); }
+  #q {
+    flex: 1; min-width: 200px; padding: 10px 14px; font: inherit; color: inherit;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  }
+  #q:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #status { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  #theme {
+    display: grid; place-items: center; width: 38px; height: 38px; padding: 0;
+    border: 1px solid var(--line); border-radius: 8px; background: none; color: inherit; cursor: pointer;
+  }
+  #theme:hover { background: var(--tile-hover); }
+  #theme svg {
+    display: none; width: 18px; height: 18px; fill: none; stroke: currentColor;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+  :root[data-theme="light"] #theme .moon, :root[data-theme="dark"] #theme .sun { display: block; }
+  .layout { display: flex; align-items: flex-start; }
+  nav {
+    position: sticky; top: 68px; width: 220px; flex: none; padding: 16px 10px;
+    max-height: calc(100vh - 100px); overflow-y: auto;
+  }
+  nav button {
+    display: flex; justify-content: space-between; gap: 8px; width: 100%;
+    padding: 7px 10px; border: 0; border-radius: 6px; background: none;
+    color: inherit; font: inherit; text-align: left; cursor: pointer;
+  }
+  nav button:hover { background: var(--tile-hover); }
+  nav button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  nav button small { opacity: 0.7; font-variant-numeric: tabular-nums; }
+  main { flex: 1; min-width: 0; padding: 16px 20px 60px; }
+  h2 {
+    margin: 18px 0 8px; font-size: 13px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--muted);
+  }
+  h2:first-child { margin-top: 0; }
+  .note { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 6px; }
+  .tile {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 12px 6px 8px; border: 1px solid transparent; border-radius: 8px;
+    background: var(--panel); color: inherit; font: inherit; cursor: pointer;
+  }
+  .tile:hover, .tile:focus-visible { background: var(--tile-hover); border-color: var(--line); outline: none; }
+  .tile img { width: 48px; height: 48px; border-radius: 6px; background: var(--line); }
+  .tile span {
+    font-size: 12px; text-align: center; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .empty { color: var(--muted); padding: 40px 0; text-align: center; }
+  .empty code { background: var(--panel); padding: 2px 6px; border-radius: 4px; }
+  #toast {
+    position: fixed; left: 50%; bottom: 52px; transform: translate(-50%, 20px);
+    background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px;
+    font-family: ui-monospace, Consolas, monospace; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s; max-width: 90vw;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  footer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; padding: 5px 12px;
+    background: var(--panel); border-top: 1px solid var(--line);
+    color: var(--muted); font-size: 12px; text-align: center;
+  }
+  @media (max-width: 720px) {
+    .layout { display: block; }
+    nav { position: static; width: auto; max-height: none; display: flex; flex-wrap: wrap; gap: 4px; padding: 10px 12px 0; }
+    nav button { width: auto; }
+    main { padding: 12px 12px 60px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>/<span>micon</span>s</h1>
+  <input id="q" type="search" placeholder="Search icons…  (press / to focus)" autocomplete="off" autofocus>
+  <div id="status"></div>
+  <button id="theme" type="button" aria-label="Dark mode" title="Toggle dark mode">
+    <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13.5A8.5 8.5 0 1 1 10.5 4a7 7 0 0 0 9.5 9.5z"/></svg>
+    <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.75 1.75M16.95 16.95l1.75 1.75M5.3 18.7l1.75-1.75M16.95 7.05l1.75-1.75"/></svg>
+  </button>
+</header>
+<div class="layout">
+  <nav id="cats" aria-label="Categories"></nav>
+  <main id="results"></main>
+</div>
+<footer>FINAL FANTASY XIV icons and names © SQUARE ENIX.</footer>
+<div id="toast" role="status"></div>
+
+<script src="data.js"></script>
+<script>
+(() => {
+  const ICON_BASE = "https://v2.xivapi.com/api/asset?format=png&path=";
+  const BATCH = 240; // tiles rendered per scroll step
+  const NOTES = {
+    item: "Item icons only show while you have at least one in your inventory or armoury chest. For an HQ item, add the HQ symbol after the name.",
+  };
+
+  const data = window.MICON_DATA;
+  const $ = (id) => document.getElementById(id);
+  const results = $("results"), cats = $("cats"), q = $("q"), status = $("status"), toast = $("toast");
+
+  if (!data) {
+    results.innerHTML = '<p class="empty">No data yet. Run <code>node fetch-data.mjs</code> in the project folder, then reload.</p>';
+    return;
+  }
+
+  const entries = data.entries.map(([name, icon, cat]) => ({ name, icon, cat, key: name.toLowerCase() }));
+  let activeCat = -1; // -1 = all
+  let matches = [];
+  let shown = 0;
+  let lastCat = null;
+  let grid = null;
+
+  const iconUrl = (id) => {
+    const s = String(id).padStart(6, "0");
+    return ICON_BASE + encodeURIComponent(`ui/icon/${s.slice(0, 3)}000/${s}_hr1.tex`);
+  };
+
+  const command = (e) => {
+    const cat = data.categories[e.cat].id;
+    return `/micon "${e.name}"` + (cat === "action" ? "" : " " + cat);
+  };
+
+  function buildNav(counts) {
+    const focused = cats.contains(document.activeElement) && document.activeElement.dataset.idx;
+    cats.textContent = "";
+    const add = (idx, label, n) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.dataset.idx = idx;
+      b.setAttribute("aria-pressed", String(idx === activeCat));
+      b.append(label);
+      const small = document.createElement("small");
+      small.textContent = n.toLocaleString();
+      b.append(small);
+      b.onclick = () => { activeCat = idx; update(); window.scrollTo(0, 0); };
+      cats.append(b);
+    };
+    add(-1, "All", counts.reduce((a, b) => a + b, 0));
+    data.categories.forEach((c, i) => { if (counts[i] || i === activeCat) add(i, c.label, counts[i]); });
+    if (focused) cats.querySelector(`[data-idx="${focused}"]`)?.focus();
+  }
+
+  function update() {
+    const words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
+    const counts = data.categories.map(() => 0);
+    matches = [];
+    for (const e of entries) {
+      if (!words.every((w) => e.key.includes(w))) continue;
+      counts[e.cat]++;
+      if (activeCat === -1 || e.cat === activeCat) matches.push(e);
+    }
+    buildNav(counts);
+    results.textContent = "";
+    shown = 0; lastCat = null; grid = null;
+    status.textContent = `${matches.length.toLocaleString()} icons · data from ${data.built}`;
+    if (!matches.length) {
+      results.innerHTML = '<p class="empty">Nothing matches that search.</p>';
+      return;
+    }
+    more();
+  }
+
+  function more() {
+    const end = Math.min(shown + BATCH, matches.length);
+    for (; shown < end; shown++) {
+      const e = matches[shown];
+      if (e.cat !== lastCat) {
+        const h = document.createElement("h2");
+        h.textContent = data.categories[e.cat].label;
+        results.append(h);
+        const note = NOTES[data.categories[e.cat].id];
+        if (note) {
+          const p = document.createElement("p");
+          p.className = "note";
+          p.textContent = note;
+          results.append(p);
+        }
+        grid = document.createElement("div");
+        grid.className = "grid";
+        results.append(grid);
+        lastCat = e.cat;
+      }
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tile";
+      b.title = command(e);
+      b.dataset.i = shown;
+      const img = new Image(48, 48);
+      img.loading = "lazy";
+      img.alt = "";
+      img.src = iconUrl(e.icon);
+      img.onerror = () => { img.style.visibility = "hidden"; };
+      const label = document.createElement("span");
+      label.textContent = e.name;
+      b.append(img, label);
+      grid.append(b);
+    }
+    // Keep filling on tall screens where one batch doesn't reach the fold.
+    if (shown < matches.length && document.body.offsetHeight < innerHeight + 800) requestAnimationFrame(more);
+  }
+
+  let toastTimer;
+  function say(text) {
+    toast.textContent = text;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+  }
+
+  async function copy(text) {
+    let ok = true;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.append(ta);
+      ta.select();
+      ok = document.execCommand("copy");
+      ta.remove();
+    }
+    say((ok ? "Copied  " : "Couldn't copy  ") + text);
+  }
+
+  results.addEventListener("click", (ev) => {
+    const tile = ev.target.closest(".tile");
+    if (tile) copy(command(matches[tile.dataset.i]));
+  });
+
+  window.addEventListener("scroll", () => {
+    if (shown < matches.length && innerHeight + scrollY > document.body.offsetHeight - 800) more();
+  }, { passive: true });
+
+  let debounce;
+  q.addEventListener("input", () => { clearTimeout(debounce); debounce = setTimeout(update, 80); });
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "/" && document.activeElement !== q) { ev.preventDefault(); q.focus(); q.select(); }
+  });
+
+  update();
+})();
+</script>
+</body>
+</html>
