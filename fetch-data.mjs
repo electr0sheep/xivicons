@@ -32,7 +32,11 @@ const SHEETS = [
   },
   { sheet: "CraftAction", fields: "Name,Icon", pick: (f) => ({ name: f.Name, icon: f.Icon, cat: "action" }) },
   { sheet: "GeneralAction", fields: "Name,Icon", pick: (f) => ({ name: f.Name, icon: f.Icon, cat: "general" }) },
-  { sheet: "Item", fields: "Name,Icon", pick: (f) => ({ name: f.Name, icon: f.Icon, cat: "item" }) },
+  {
+    sheet: "Item",
+    fields: "Name,Icon,CanBeHq",
+    pick: (f) => ({ name: f.Name, icon: f.Icon, cat: "item", hq: f.CanBeHq === true }),
+  },
   { sheet: "Mount", fields: "Singular,Icon", pick: (f) => ({ name: title(f.Singular), icon: f.Icon, cat: "mount" }) },
   { sheet: "Companion", fields: "Singular,Icon", pick: (f) => ({ name: title(f.Singular), icon: f.Icon, cat: "minion" }) },
   { sheet: "Emote", fields: "Name,Icon", pick: (f) => ({ name: f.Name, icon: f.Icon, cat: "emote" }) },
@@ -58,22 +62,23 @@ const SHEETS = [
   },
 ];
 
-// Display order + labels for the sidebar.
+// Display order + labels for the sidebar. The All view lists categories in this order too, so
+// the everyday ones lead, and the PvP / Blue Mage look-alikes and the huge item list come last.
 const CATEGORIES = [
   ["action", "Actions"],
-  ["blueaction", "Blue Mage"],
-  ["pvpaction", "PvP Actions"],
   ["general", "General Actions"],
-  ["item", "Items"],
   ["mount", "Mounts"],
   ["minion", "Minions"],
   ["emote", "Emotes"],
+  ["classjob", "Classes & Jobs"],
+  ["waymark", "Waymarks"],
+  ["enemysign", "Enemy Signs"],
+  ["quickchat", "Quick Chat"],
   ["companion", "Chocobo Companion"],
   ["pet", "Pet Actions"],
-  ["enemysign", "Enemy Signs"],
-  ["waymark", "Waymarks"],
-  ["quickchat", "Quick Chat"],
-  ["classjob", "Classes & Jobs"],
+  ["blueaction", "Blue Mage"],
+  ["pvpaction", "PvP Actions"],
+  ["item", "Items"],
 ];
 
 // ---------------------------------------------------------------------------
@@ -156,7 +161,7 @@ async function* search(sheet, query, fields) {
 
 const catIndex = new Map(CATEGORIES.map(([id], i) => [id, i]));
 const seen = new Set();
-const entries = []; // [name, iconId, categoryIndex]
+const entries = []; // [name, iconId, categoryIndex], plus a trailing 1 for items that can be HQ
 const counts = {};
 let failed = false;
 
@@ -175,7 +180,9 @@ for (const { sheet, query, fields, pick } of SHEETS) {
       const key = hit.cat + "\u0000" + name.toLowerCase();
       if (seen.has(key)) continue; // e.g. same crafting action on every crafter
       seen.add(key);
-      entries.push([name, icon, catIndex.get(hit.cat)]);
+      const entry = [name, icon, catIndex.get(hit.cat)];
+      if (hit.hq) entry.push(1);
+      entries.push(entry);
       counts[hit.cat] = (counts[hit.cat] ?? 0) + 1;
       kept++;
       if (total % 5000 === 0) process.stdout.write(`  ${sheet}: ${total} rows...\r`);

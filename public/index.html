@@ -39,6 +39,7 @@
     color-scheme: light;
     --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1c1a; --muted: #6f6b64;
     --line: #e4e1da; --accent: #b3541e; --accent-ink: #ffffff; --tile-hover: #f1ede4;
+    --tile-min: 112px; --tile-gap: 6px;
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
@@ -46,25 +47,33 @@
     --line: #313038; --accent: #e0a458; --accent-ink: #1b1710; --tile-hover: #2a2930;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
     font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
   }
+  button:focus-visible, a:focus-visible, input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   header {
     position: sticky; top: 0; z-index: 5; background: var(--panel);
     border-bottom: 1px solid var(--line); padding: 14px 20px;
-    display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+    display: flex; gap: 16px; align-items: center;
   }
   h1 { margin: 0; font-size: 20px; letter-spacing: -0.02em; white-space: nowrap; }
   h1 span { color: var(--accent); }
+  .search { position: relative; flex: 1; min-width: 0; }
   #q {
-    flex: 1; min-width: 200px; padding: 10px 14px; font: inherit; color: inherit;
+    width: 100%; padding: 10px 14px; font: inherit; color: inherit;
     background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
   }
   #q:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  #status { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .slash {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none;
+    padding: 0 7px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel);
+    color: var(--muted); font: 12px/20px ui-monospace, Consolas, monospace;
+  }
+  #q:focus + .slash, #q:not(:placeholder-shown) + .slash { display: none; }
   #theme {
-    display: grid; place-items: center; width: 38px; height: 38px; padding: 0;
+    flex: none; display: grid; place-items: center; width: 38px; height: 38px; padding: 0;
     border: 1px solid var(--line); border-radius: 8px; background: none; color: inherit; cursor: pointer;
   }
   #theme:hover { background: var(--tile-hover); }
@@ -87,26 +96,51 @@
   nav button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
   nav button small { opacity: 0.7; font-variant-numeric: tabular-nums; }
   main { flex: 1; min-width: 0; padding: 16px 20px 60px; }
-  h2 {
-    margin: 18px 0 8px; font-size: 13px; text-transform: uppercase;
-    letter-spacing: 0.08em; color: var(--muted);
+  .toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-bottom: 12px; color: var(--muted); font-size: 13px;
   }
-  h2:first-child { margin-top: 0; }
+  #status { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .opt { display: flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; user-select: none; }
+  .opt input { margin: 0; accent-color: var(--accent); }
+  .group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 18px 0 8px; }
+  .group-head:first-child { margin-top: 0; }
+  h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .more {
+    padding: 2px 4px; border: 0; border-radius: 4px; background: none;
+    color: var(--accent); font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer;
+  }
+  .more:hover { text-decoration: underline; }
   .note { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 6px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tile-min), 1fr)); gap: var(--tile-gap); }
+  .cell { position: relative; display: flex; }
   .tile {
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px;
     padding: 12px 6px 8px; border: 1px solid transparent; border-radius: 8px;
     background: var(--panel); color: inherit; font: inherit; cursor: pointer;
   }
-  .tile:hover, .tile:focus-visible { background: var(--tile-hover); border-color: var(--line); outline: none; }
+  .tile:hover { background: var(--tile-hover); border-color: var(--line); }
+  .tile:focus-visible, .armed .top .tile { outline: 2px solid var(--accent); outline-offset: 1px; }
   .tile img { width: 48px; height: 48px; border-radius: 6px; background: var(--line); }
-  .tile span {
-    font-size: 12px; text-align: center; overflow-wrap: anywhere;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  .tile .name {
+    font-size: 12px; text-align: center; overflow-wrap: anywhere; overflow: hidden;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3;
   }
+  .badge {
+    position: absolute; top: 5px; padding: 0 5px; border-radius: 4px;
+    font: 600 10px/16px system-ui, -apple-system, "Segoe UI", sans-serif; font-variant-numeric: tabular-nums;
+  }
+  .dupes { left: 5px; background: var(--bg); color: var(--muted); pointer-events: none; }
+  .hq { right: 5px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer; }
+  .hq:hover { border-color: var(--accent); color: var(--accent); }
+  @media (pointer: coarse) { .hq::after { content: ""; position: absolute; inset: -10px; } } /* bigger tap target */
   .empty { color: var(--muted); padding: 40px 0; text-align: center; }
   .empty code { background: var(--panel); padding: 2px 6px; border-radius: 4px; }
+  .empty button {
+    margin-top: 12px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--panel); color: var(--ink); font: inherit; cursor: pointer;
+  }
+  .empty button:hover { background: var(--tile-hover); }
   #toast {
     position: fixed; left: 50%; bottom: 52px; transform: translate(-50%, 20px);
     background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px;
@@ -114,24 +148,46 @@
     opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s; max-width: 90vw;
   }
   #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .hq-glyph {
+    display: inline-block; margin-left: 1px; padding: 0 3px; border: 1px solid currentColor; border-radius: 3px;
+    font: 600 9px/12px system-ui, sans-serif; vertical-align: 1px;
+  }
   footer {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; padding: 5px 12px;
     background: var(--panel); border-top: 1px solid var(--line);
     color: var(--muted); font-size: 12px; text-align: center;
+    display: flex; flex-wrap: wrap; justify-content: center; column-gap: 12px; /* very narrow screens: icon wraps cleanly */
   }
+  footer a { display: flex; align-items: center; margin: -5px; padding: 5px; border-radius: 4px; color: inherit; } /* padding = bigger hit area */
+  footer a:hover { color: var(--accent); }
+  footer a:focus-visible { outline-offset: -2px; } /* keep the ring inside the footer */
+  footer svg { width: 14px; height: 14px; fill: currentColor; }
+  @media (hover: none) { .slash { display: none; } }
   @media (max-width: 720px) {
+    header { padding: 10px 12px; gap: 10px; }
+    h1 { font-size: 18px; }
+    #q { font-size: 16px; } /* below 16px, iOS zooms the page when the field gets focus */
     .layout { display: block; }
-    nav { position: static; width: auto; max-height: none; display: flex; flex-wrap: wrap; gap: 4px; padding: 10px 12px 0; }
-    nav button { width: auto; }
-    main { padding: 12px 12px 60px; }
+    nav {
+      position: static; width: auto; max-height: none; display: flex; gap: 4px;
+      overflow-x: auto; padding: 10px 12px 0; scrollbar-width: none;
+      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+      mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+    }
+    nav::-webkit-scrollbar { display: none; }
+    nav button { width: auto; flex: none; white-space: nowrap; }
+    main { padding: 10px 12px 60px; }
+    .toolbar { font-size: 12px; }
   }
 </style>
 </head>
 <body>
 <header>
   <h1>/<span>micon</span>s</h1>
-  <input id="q" type="search" placeholder="Search icons…  (press / to focus)" autocomplete="off" autofocus>
-  <div id="status"></div>
+  <div class="search">
+    <input id="q" type="search" placeholder="Search icons…" aria-label="Search icons" aria-keyshortcuts="/" autocomplete="off" autofocus>
+    <kbd class="slash" aria-hidden="true">/</kbd>
+  </div>
   <button id="theme" type="button" aria-label="Dark mode" title="Toggle dark mode">
     <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13.5A8.5 8.5 0 1 1 10.5 4a7 7 0 0 0 9.5 9.5z"/></svg>
     <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.75 1.75M16.95 16.95l1.75 1.75M5.3 18.7l1.75-1.75M16.95 7.05l1.75-1.75"/></svg>
@@ -139,165 +195,384 @@
 </header>
 <div class="layout">
   <nav id="cats" aria-label="Categories"></nav>
-  <main id="results"></main>
+  <main>
+    <div class="toolbar">
+      <span id="status"></span>
+      <label class="opt" title="Show each icon once, with a count of the other names that use it"><input id="uniq" type="checkbox"> One tile per icon</label>
+    </div>
+    <div id="results"></div>
+  </main>
 </div>
-<footer>FINAL FANTASY XIV icons and names © SQUARE ENIX.</footer>
+<footer><span>FINAL FANTASY XIV icons and names © SQUARE ENIX.</span><a href="https://github.com/electr0sheep/xivicons" aria-label="Source on GitHub" title="Source on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a></footer>
 <div id="toast" role="status"></div>
 
 <script src="data.js"></script>
 <script>
 (() => {
   const ICON_BASE = "https://v2.xivapi.com/api/asset?format=png&path=";
-  const BATCH = 240; // tiles rendered per scroll step
+  const BATCH = 240;      // tiles rendered per scroll step
+  const PREVIEW_ROWS = 2; // rows per category in the All view while several categories match
+  const HQ = "";    // the game's HQ symbol; only the game can draw it, so the toast shows a stand-in
   const NOTES = {
-    item: "Item icons only show while you have at least one in your inventory or armoury chest. For an HQ item, add the HQ symbol after the name.",
+    item: "Item icons only show while you have at least one in your inventory or armoury chest. The HQ button copies the high-quality version.",
   };
 
   const data = window.MICON_DATA;
   const $ = (id) => document.getElementById(id);
-  const results = $("results"), cats = $("cats"), q = $("q"), status = $("status"), toast = $("toast");
+  const results = $("results"), cats = $("cats"), q = $("q"), status = $("status"), toast = $("toast"), uniq = $("uniq");
 
   if (!data) {
+    document.querySelector(".toolbar").hidden = true;
     results.innerHTML = '<p class="empty">No data yet. Run <code>node fetch-data.mjs</code> in the project folder, then reload.</p>';
     return;
   }
 
-  const entries = data.entries.map(([name, icon, cat]) => ({ name, icon, cat, key: name.toLowerCase() }));
-  let activeCat = -1; // -1 = all
-  let matches = [];
-  let shown = 0;
-  let lastCat = null;
-  let grid = null;
+  // Lowercase, strip accents and apostrophes, and turn other punctuation into spaces,
+  // so "fete" finds "Fête", "hi ether" finds "Hi-Ether" and "fires" finds "Fire's Reply".
+  const norm = (s) => {
+    s = s.toLowerCase();
+    if (/[^\x00-\x7f]/.test(s)) s = s.normalize("NFD").replace(/\p{M}+/gu, "");
+    return s.replace(/['’]/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  };
+
+  const entries = data.entries.map(([name, icon, cat, hq]) => {
+    const key = norm(name);
+    return { name, icon, cat, hq: hq === 1, key, spaced: " " + key, rank: 0 };
+  });
+  const touch = matchMedia("(hover: none)");
+
+  let activeCat = -1;     // -1 = all
+  let list = [];          // entries in drawing order
+  let capped = new Map(); // category -> full count, for groups cut short in the All view
+  let others = new Map(); // entry -> names of the other entries that share its icon
+  let hasQuery = false, total = 0, cols = 0, previewing = false;
+  let shown = 0, lastCat = null, grid = null;
 
   const iconUrl = (id) => {
     const s = String(id).padStart(6, "0");
     return ICON_BASE + encodeURIComponent(`ui/icon/${s.slice(0, 3)}000/${s}_hr1.tex`);
   };
 
-  const command = (e) => {
+  // HQ items take the symbol after a space, inside the quotes: /micon "Hard Leather " item
+  const command = (e, hq = false) => {
     const cat = data.categories[e.cat].id;
-    return `/micon "${e.name}"` + (cat === "action" ? "" : " " + cat);
+    return `/micon "${e.name}${hq ? " " + HQ : ""}"` + (cat === "action" ? "" : " " + cat);
   };
 
-  function buildNav(counts) {
-    const focused = cats.contains(document.activeElement) && document.activeElement.dataset.idx;
-    cats.textContent = "";
-    const add = (idx, label, n) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.dataset.idx = idx;
+  const plural = (n, word) => `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
+
+  // Built once and updated in place, so focus and the mobile row's scroll position survive typing.
+  const navButtons = [-1, ...data.categories.keys()].map((idx) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.dataset.idx = idx;
+    b.append(idx === -1 ? "All" : data.categories[idx].label, document.createElement("small"));
+    b.onclick = () => setCat(idx);
+    cats.append(b);
+    return b;
+  });
+
+  function updateNav(counts) {
+    const all = counts.reduce((a, b) => a + b, 0);
+    for (const b of navButtons) {
+      const idx = Number(b.dataset.idx);
+      const n = idx === -1 ? all : counts[idx];
+      b.hidden = idx !== -1 && n === 0 && idx !== activeCat;
       b.setAttribute("aria-pressed", String(idx === activeCat));
-      b.append(label);
-      const small = document.createElement("small");
-      small.textContent = n.toLocaleString();
-      b.append(small);
-      b.onclick = () => { activeCat = idx; update(); window.scrollTo(0, 0); };
-      cats.append(b);
-    };
-    add(-1, "All", counts.reduce((a, b) => a + b, 0));
-    data.categories.forEach((c, i) => { if (counts[i] || i === activeCat) add(i, c.label, counts[i]); });
-    if (focused) cats.querySelector(`[data-idx="${focused}"]`)?.focus();
+      b.lastChild.textContent = n.toLocaleString();
+    }
   }
 
-  function update() {
-    const words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
-    const counts = data.categories.map(() => 0);
-    matches = [];
+  function revealActiveCat() {
+    navButtons[activeCat + 1].scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+
+  // Matches per category, best first: the whole name, then the start of the name, then the
+  // start of a word, then anywhere. The data is alphabetical and sort() is stable, so ties stay A–Z.
+  function search() {
+    const qn = norm(q.value);
+    const words = qn ? qn.split(" ") : [];
+    hasQuery = words.length > 0;
+    const byCat = data.categories.map(() => []);
     for (const e of entries) {
-      if (!words.every((w) => e.key.includes(w))) continue;
-      counts[e.cat]++;
-      if (activeCat === -1 || e.cat === activeCat) matches.push(e);
+      if (hasQuery) {
+        if (!words.every((w) => e.key.includes(w))) continue;
+        e.rank = e.key === qn ? 0 : e.key.startsWith(qn) ? 1 : words.every((w) => e.spaced.includes(" " + w)) ? 2 : 3;
+      }
+      byCat[e.cat].push(e);
     }
-    buildNav(counts);
+    if (hasQuery) for (const l of byCat) l.sort((a, b) => a.rank - b.rank);
+
+    others = new Map();
+    if (uniq.checked) {
+      for (let c = 0; c < byCat.length; c++) {
+        const first = new Map();
+        byCat[c] = byCat[c].filter((e) => {
+          const f = first.get(e.icon);
+          if (!f) { first.set(e.icon, e); return true; }
+          if (others.has(f)) others.get(f).push(e.name);
+          else others.set(f, [e.name]);
+          return false;
+        });
+      }
+    }
+    return byCat;
+  }
+
+  function columns() {
+    const css = getComputedStyle(document.documentElement);
+    const min = parseFloat(css.getPropertyValue("--tile-min")) || 112;
+    const gap = parseFloat(css.getPropertyValue("--tile-gap")) || 6;
+    return Math.max(1, Math.floor((results.clientWidth + gap) / (min + gap)));
+  }
+
+  function update({ keepScroll = false } = {}) {
+    const byCat = search();
+    const counts = byCat.map((l) => l.length);
+    updateNav(counts);
+
+    const groups = [];
+    byCat.forEach((l, c) => { if (l.length && (activeCat === -1 || c === activeCat)) groups.push({ c, l }); });
+    // In All, the category holding the best match goes first, so "ether" leads with the Ether item
+    // and "spri" with Sprint. Categories that match equally well keep the sidebar order.
+    if (activeCat === -1 && hasQuery) groups.sort((a, b) => a.l[0].rank - b.l[0].rank || a.c - b.c);
+
+    // With several categories in All, show a couple of rows of each and link to the rest.
+    previewing = activeCat === -1 && groups.length > 1;
+    cols = columns();
+    const cap = previewing ? PREVIEW_ROWS * cols : Infinity;
+    list = [];
+    capped = new Map();
+    for (const { c, l } of groups) {
+      if (l.length > cap) capped.set(c, l.length);
+      list = list.concat(l.length > cap ? l.slice(0, cap) : l);
+    }
+    total = groups.reduce((n, g) => n + g.l.length, 0);
+
     results.textContent = "";
+    if (!keepScroll) window.scrollTo(0, 0);
     shown = 0; lastCat = null; grid = null;
-    status.textContent = `${matches.length.toLocaleString()} icons · data from ${data.built}`;
-    if (!matches.length) {
-      results.innerHTML = '<p class="empty">Nothing matches that search.</p>';
-      return;
+    if (list.length) more();
+    else showEmpty(counts);
+    arm();
+  }
+
+  function showEmpty(counts) {
+    const p = document.createElement("p");
+    p.className = "empty";
+    const all = counts.reduce((a, b) => a + b, 0);
+    const query = `“${q.value.trim()}”`;
+    if (activeCat !== -1 && all) {
+      p.append(`Nothing in ${data.categories[activeCat].label} matches ${query}.`, document.createElement("br"));
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = `Show all ${plural(all, "result")}`;
+      b.onclick = () => setCat(-1);
+      p.append(b);
+    } else {
+      p.textContent = `Nothing matches ${query}.`;
     }
-    more();
+    results.append(p);
   }
 
   function more() {
-    const end = Math.min(shown + BATCH, matches.length);
+    const end = Math.min(shown + BATCH, list.length);
     for (; shown < end; shown++) {
-      const e = matches[shown];
-      if (e.cat !== lastCat) {
-        const h = document.createElement("h2");
-        h.textContent = data.categories[e.cat].label;
-        results.append(h);
-        const note = NOTES[data.categories[e.cat].id];
-        if (note) {
-          const p = document.createElement("p");
-          p.className = "note";
-          p.textContent = note;
-          results.append(p);
-        }
-        grid = document.createElement("div");
-        grid.className = "grid";
-        results.append(grid);
-        lastCat = e.cat;
-      }
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "tile";
-      b.title = command(e);
-      b.dataset.i = shown;
-      const img = new Image(48, 48);
-      img.loading = "lazy";
-      img.alt = "";
-      img.src = iconUrl(e.icon);
-      img.onerror = () => { img.style.visibility = "hidden"; };
-      const label = document.createElement("span");
-      label.textContent = e.name;
-      b.append(img, label);
-      grid.append(b);
+      const e = list[shown];
+      if (e.cat !== lastCat) startGroup(e.cat);
+      grid.append(cell(e, shown));
     }
     // Keep filling on tall screens where one batch doesn't reach the fold.
-    if (shown < matches.length && document.body.offsetHeight < innerHeight + 800) requestAnimationFrame(more);
+    if (shown < list.length && document.body.offsetHeight < innerHeight + 800) requestAnimationFrame(more);
+  }
+
+  function startGroup(c) {
+    const cat = data.categories[c];
+    const head = document.createElement("div");
+    head.className = "group-head";
+    const h = document.createElement("h2");
+    h.textContent = cat.label;
+    head.append(h);
+    if (capped.has(c)) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "more";
+      b.textContent = `Show all ${capped.get(c).toLocaleString()} →`;
+      b.onclick = () => setCat(c);
+      head.append(b);
+    }
+    results.append(head);
+    if (NOTES[cat.id]) {
+      const p = document.createElement("p");
+      p.className = "note";
+      p.textContent = NOTES[cat.id];
+      results.append(p);
+    }
+    grid = document.createElement("div");
+    grid.className = "grid";
+    results.append(grid);
+    lastCat = c;
+  }
+
+  function cell(e, i) {
+    const div = document.createElement("div");
+    div.className = i === 0 ? "cell top" : "cell";
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "tile";
+    b.dataset.i = i;
+    b.title = command(e);
+    const img = new Image(48, 48);
+    img.loading = "lazy";
+    img.alt = "";
+    img.src = iconUrl(e.icon);
+    img.onerror = () => { img.style.visibility = "hidden"; };
+    const label = document.createElement("span");
+    label.className = "name";
+    label.textContent = e.name;
+    b.append(img, label);
+    const same = others.get(e);
+    if (same) {
+      const n = document.createElement("span");
+      n.className = "badge dupes";
+      n.textContent = "+" + same.length.toLocaleString();
+      b.append(n);
+      const rest = same.length > 8 ? `, and ${(same.length - 8).toLocaleString()} more` : "";
+      b.title += `\nSame icon: ${same.slice(0, 8).join(", ")}${rest}`;
+    }
+    div.append(b);
+    if (e.hq) {
+      const h = document.createElement("button");
+      h.type = "button";
+      h.className = "badge hq";
+      h.dataset.i = i;
+      h.textContent = "HQ";
+      h.title = "Copy the HQ version";
+      h.setAttribute("aria-label", `Copy the HQ version of ${e.name}`);
+      div.append(h);
+    }
+    return div;
+  }
+
+  // While the search box has focus, Enter copies the first result; outline it so that's visible.
+  function arm() {
+    const on = hasQuery && list.length > 0 && document.activeElement === q;
+    results.classList.toggle("armed", on);
+    const hint = on && !touch.matches ? "Enter copies the highlighted icon" : `data from ${data.built}`;
+    status.textContent = `${plural(total, "icon")} · ${hint}`;
   }
 
   let toastTimer;
-  function say(text) {
-    toast.textContent = text;
+  function say(label, text) {
+    toast.textContent = label + "  ";
+    text.split(HQ).forEach((part, i) => {
+      if (i) {
+        const g = document.createElement("span");
+        g.className = "hq-glyph";
+        g.textContent = "HQ";
+        toast.append(g);
+      }
+      toast.append(part);
+    });
     toast.classList.add("show");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
   }
 
-  async function copy(text) {
+  async function copy(e, hq = false) {
+    const text = command(e, hq);
     let ok = true;
     try {
       await navigator.clipboard.writeText(text);
     } catch {
+      const back = document.activeElement;
       const ta = document.createElement("textarea");
       ta.value = text;
       document.body.append(ta);
       ta.select();
       ok = document.execCommand("copy");
       ta.remove();
+      back?.focus();
     }
-    say((ok ? "Copied  " : "Couldn't copy  ") + text);
+    say(ok ? "Copied" : "Couldn't copy", text);
+  }
+
+  function readURL() {
+    const p = new URLSearchParams(location.search);
+    q.value = p.get("q") ?? "";
+    activeCat = data.categories.findIndex((c) => c.id === p.get("cat"));
+  }
+
+  // Typing replaces the history entry; changing category adds one, so Back goes to the previous category.
+  function syncURL(push) {
+    const p = new URLSearchParams();
+    if (q.value.trim()) p.set("q", q.value.trim());
+    if (activeCat !== -1) p.set("cat", data.categories[activeCat].id);
+    const s = p.toString();
+    const url = location.pathname + (s ? "?" + s : "") + location.hash;
+    if (url === location.pathname + location.search + location.hash) return;
+    try { history[push ? "pushState" : "replaceState"](null, "", url); } catch {}
+  }
+
+  function setCat(idx) {
+    const changed = idx !== activeCat;
+    activeCat = idx;
+    update();
+    if (changed) syncURL(true);
   }
 
   results.addEventListener("click", (ev) => {
-    const tile = ev.target.closest(".tile");
-    if (tile) copy(command(matches[tile.dataset.i]));
+    const t = ev.target.closest(".tile, .hq");
+    if (t) copy(list[t.dataset.i], t.classList.contains("hq"));
   });
 
   window.addEventListener("scroll", () => {
-    if (shown < matches.length && innerHeight + scrollY > document.body.offsetHeight - 800) more();
+    if (shown < list.length && innerHeight + scrollY > document.body.offsetHeight - 800) more();
   }, { passive: true });
 
-  let debounce;
-  q.addEventListener("input", () => { clearTimeout(debounce); debounce = setTimeout(update, 80); });
+  // The All preview shows whole rows, so redraw it when the column count changes (window resized,
+  // phone rotated, scrollbar appeared). Deferred a frame so the redraw isn't inside the observer.
+  let refit = 0;
+  new ResizeObserver(() => {
+    cancelAnimationFrame(refit);
+    refit = requestAnimationFrame(() => { if (previewing && columns() !== cols) update({ keepScroll: true }); });
+  }).observe(results);
+
+  window.addEventListener("popstate", () => { readURL(); update(); revealActiveCat(); });
+
+  let debounce = 0;
+  q.addEventListener("input", () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => { debounce = 0; update(); syncURL(false); }, 80);
+  });
+
+  q.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Enter" || ev.isComposing) return;
+    ev.preventDefault();
+    if (debounce) { clearTimeout(debounce); debounce = 0; update(); syncURL(false); }
+    if (!hasQuery || !list.length) return;
+    copy(list[0]);
+    if (touch.matches) q.blur(); // drop the on-screen keyboard so the toast is visible
+  });
+  q.addEventListener("focus", arm);
+  q.addEventListener("blur", arm);
+
+  uniq.addEventListener("change", () => {
+    try {
+      if (uniq.checked) localStorage.setItem("onePerIcon", "1");
+      else localStorage.removeItem("onePerIcon");
+    } catch {}
+    update();
+  });
 
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "/" && document.activeElement !== q) { ev.preventDefault(); q.focus(); q.select(); }
   });
 
+  try { uniq.checked = localStorage.getItem("onePerIcon") === "1"; } catch {}
+  readURL();
   update();
+  revealActiveCat();
 })();
 </script>
 </body>
